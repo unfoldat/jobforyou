@@ -1,0 +1,92 @@
+---
+import Base from '../layouts/Base.astro';
+import {
+  allJobs, openJobs, closedJobs, SUB_ORDER, todayLabel, isToday,
+  displayName, deadlineLabel, place, type Job,
+} from '../lib/jobs';
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const link = (j: Job) => `${base}/jobs/${j.postingId}/`;
+
+const office = openJobs.filter((j) => j.category === '사무직');
+const field = openJobs.filter((j) => j.category === '현장직');
+const fieldBySub = SUB_ORDER
+  .map((s) => ({ name: s, items: field.filter((j) => j.subcategory === s) }))
+  .filter((g) => g.items.length > 0);
+
+const description = `${todayLabel} 기준 접수 중인 장애인 채용공고 ${openJobs.length}건. 사무직 ${office.length}건, 현장직 ${field.length}건을 마감 임박순으로 정리했습니다.`;
+---
+<Base title="장애인 채용공고 모아보기" description={description} path="/">
+  <h1>장애인 채용공고 모아보기</h1>
+  <p class="lead">
+    {todayLabel} 기준 접수 중인 공고는 <strong>{openJobs.length}건</strong>입니다.
+    사무직 {office.length}건, 현장직 {field.length}건이고, 마감이 가까운 순서로 보여 드립니다.
+    마감된 공고 {closedJobs.length}건은 맨 아래에 따로 남겨 두었습니다.
+  </p>
+  <p class="notice">
+    이 목록은 한국장애인개발원의 「2026년 10월 1차 기업체 장애인 채용 안내」 첨부파일 {allJobs.length}건을 옮겨 정리한 것입니다.
+    옮기는 과정에서 틀린 부분이 있을 수 있으니, 지원 전에 각 공고의 원문에서 마감일과 조건을 꼭 확인하세요.
+  </p>
+
+  <nav aria-label="이 페이지 바로가기">
+    <ul class="jump">
+      <li><a href="#office">사무직 {office.length}건</a></li>
+      <li><a href="#field">현장직 {field.length}건</a></li>
+      <li><a href="#closed">마감된 공고 {closedJobs.length}건</a></li>
+    </ul>
+  </nav>
+
+  <h2 id="office">사무직 ({office.length}건)</h2>
+  <ol class="jobs">
+    {office.map((j) => (
+      <li>
+        <a class="t" href={link(j)}>{displayName(j)} · {j.jobTitle}</a>
+        {' '}
+        <span class="m">
+          <span class="st">{isToday(j) ? '오늘 마감 ' : '마감 '}{deadlineLabel(j)}</span> · {place(j)} · {j.employmentType} · {j.pay} · {j.eligibility}
+        </span>
+      </li>
+    ))}
+  </ol>
+
+  <h2 id="field">현장직 ({field.length}건)</h2>
+  <nav aria-label="현장직 세부 분류 바로가기">
+    <ul class="jump">
+      {fieldBySub.map((g) => <li><a href={`#sub-${g.name}`}>{g.name} {g.items.length}건</a></li>)}
+    </ul>
+  </nav>
+  {fieldBySub.map((g) => (
+    <>
+      <h3 id={`sub-${g.name}`}>{g.name} ({g.items.length}건)</h3>
+      <ol class="jobs">
+        {g.items.map((j) => (
+          <li>
+            <a class="t" href={link(j)}>{displayName(j)} · {j.jobTitle}</a>
+            {' '}
+            <span class="m">
+              <span class="st">{isToday(j) ? '오늘 마감 ' : '마감 '}{deadlineLabel(j)}</span> · {place(j)} · {j.employmentType} · {j.pay} · {j.eligibility}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </>
+  ))}
+
+  <h2 id="closed">마감된 공고 ({closedJobs.length}건)</h2>
+  <p>접수가 끝난 공고입니다. 재모집될 수 있어 지우지 않고 남겨 둡니다.</p>
+  <ol class="jobs">
+    {closedJobs.map((j) => (
+      <li>
+        <a class="t" href={link(j)}>{displayName(j)} · {j.jobTitle}</a>
+        {' '}
+        <span class="m"><span class="st">마감됨 {deadlineLabel(j)}</span> · {place(j)} · {j.category}</span>
+      </li>
+    ))}
+  </ol>
+
+  <h2>이 목록을 기계가 읽는 형태로</h2>
+  <ul>
+    <li><a href={`${base}/jobs.md`}>마크다운 전체 목록 (jobs.md)</a></li>
+    <li><a href={`${base}/jobs.json`}>데이터 전체 (jobs.json)</a></li>
+  </ul>
+</Base>

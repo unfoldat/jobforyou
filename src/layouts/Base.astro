@@ -1,0 +1,77 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  path?: string; // base 이후의 경로 (예: /jobs/2026-10-1-01/)
+}
+const { title, description, path = '/' } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const canonical = new URL(`${base}${path}`, Astro.site).href;
+const siteName = '장애인 채용공고 모아보기';
+---
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title === siteName ? title : `${title} | ${siteName}`}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <style>
+      :root {
+        --bg: #ffffff; --fg: #0b0c0c; --sub: #505a5f; --link: #1d70b8; --link-h: #003078;
+        --line: #b1b4b6; --panel: #f3f2f1; --focus: #ffdd00; --focus-fg: #0b0c0c;
+      }
+      @media (prefers-contrast: more) {
+        :root { --bg: #000; --fg: #fff; --sub: #fff; --link: #ff0; --link-h: #fff; --line: #fff; --panel: #000; }
+      }
+      html { font-size: 18px; }
+      body {
+        margin: 0; background: var(--bg); color: var(--fg); line-height: 1.7;
+        font-family: "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+        word-break: keep-all; overflow-wrap: break-word;
+      }
+      a { color: var(--link); text-underline-offset: .15em; }
+      a:hover { color: var(--link-h); }
+      a:focus-visible { outline: 3px solid transparent; background: var(--focus); color: var(--focus-fg); box-shadow: 0 -2px var(--focus), 0 4px var(--focus-fg); text-decoration: none; }
+      .skip { position: absolute; left: -999rem; }
+      .skip:focus { left: 0; top: 0; background: var(--bg); padding: .6rem 1rem; z-index: 10; }
+      .wrap { max-width: 44rem; margin: 0 auto; padding: 0 1rem; }
+      header.site { border-bottom: .4rem solid var(--fg); padding: .6rem 0; }
+      header.site p { margin: 0; font-weight: 700; font-size: 1.15rem; }
+      header.site a { color: inherit; text-decoration: none; }
+      h1 { font-size: 1.9rem; line-height: 1.3; margin: 1.4rem 0 1rem; }
+      h2 { font-size: 1.4rem; line-height: 1.3; margin: 2.4rem 0 .6rem; }
+      h3 { font-size: 1.15rem; margin: 1.6rem 0 .4rem; }
+      .lead { font-size: 1.1rem; }
+      .notice { border-left: .5rem solid var(--fg); padding: .4rem 0 .4rem 1rem; margin: 1.2rem 0; background: var(--panel); }
+      ul.jump { padding-left: 1.2rem; }
+      ol.jobs { list-style: none; padding: 0; margin: 0; }
+      ol.jobs li { padding: .7rem 0; border-bottom: 1px solid var(--line); }
+      ol.jobs li:first-child { border-top: 1px solid var(--line); }
+      .t { font-weight: 700; }
+      .m { display: block; font-size: .9rem; color: var(--sub); }
+      .st { font-weight: 700; }
+      dl.rows { margin: 0; }
+      dl.rows .row { display: grid; grid-template-columns: 8rem 1fr; gap: .2rem 1rem; padding: .6rem 0; border-bottom: 1px solid var(--line); }
+      dl.rows .row:first-child { border-top: 1px solid var(--line); }
+      dl.rows dt { font-weight: 700; margin: 0; }
+      dl.rows dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+      @media (max-width: 34rem) { dl.rows .row { grid-template-columns: 1fr; } }
+      nav.crumb ol { list-style: none; padding: 0; margin: 1rem 0 0; display: flex; flex-wrap: wrap; gap: .2rem .5rem; font-size: .9rem; }
+      nav.crumb li + li::before { content: "›"; margin-right: .5rem; color: var(--sub); }
+      footer { margin-top: 3rem; background: var(--panel); border-top: .4rem solid var(--fg); padding: 1.2rem 0 2rem; font-size: .9rem; }
+      footer p { margin: .4rem 0; }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#main">본문 바로가기</a>
+    <header class="site"><div class="wrap"><p><a href={`${base}/`}>{siteName}</a></p></div></header>
+    <main id="main" tabindex="-1"><div class="wrap"><slot /></div></main>
+    <footer>
+      <div class="wrap">
+        <p><strong>공고 원문을 옮겨 정리한 비공식 안내 사이트입니다.</strong> 지원 전에 반드시 원문(출처)에서 마감일과 조건을 다시 확인하세요.</p>
+      </div>
+    </footer>
+  </body>
+</html>

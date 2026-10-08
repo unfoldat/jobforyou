@@ -1,0 +1,82 @@
+---
+import Base from '../../layouts/Base.astro';
+import {
+  allJobs, isOpen, displayName, deadlineLabel, place, pageTitle, summary, todayLabel, type Job,
+} from '../../lib/jobs';
+
+export function getStaticPaths() {
+  return allJobs.map((job) => ({ params: { id: job.postingId }, props: { job } }));
+}
+
+const { job } = Astro.props as { job: Job };
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const open = isOpen(job);
+const title = pageTitle(job);
+const lead = summary(job);
+
+const deadlineNoteText = job.deadlineNote
+  ? ` (원문에 '${job.deadlineNote}'라고 함께 적혀 있어, 인원이 차면 마감일 전에 끝날 수 있습니다)`
+  : '';
+
+const rows: [string, string | null][] = [
+  ['현재 상태', open ? `접수 중 (${todayLabel} 기준)` : '마감됨'],
+  ['접수 마감', `${deadlineLabel(job)}${deadlineNoteText}`],
+  ['분류', `${job.category} · ${job.subcategory}`],
+  ['기관', displayName(job)],
+  ['기관 구분', job.sector],
+  ['근무지', place(job)],
+  ['직무', job.jobTitle],
+  ['모집인원', job.headcount],
+  ['하는 일', job.duty],
+  ['고용형태', job.employmentType],
+  ['근로계약', job.contractText],
+  ['근무시간', job.hours],
+  ['급여', job.pay],
+  ['근무방식', job.remoteMentioned ? '재택 가능' : '출근 (공고에 재택 표기 없음)'],
+  ['지원 구분', job.eligibility],
+  ['지원 자격', job.requirements],
+  ['우대사항', job.preferences],
+  ['제출서류', job.submitDocs],
+  ['접수방법', job.applyMethod],
+  ['접수 이메일', job.applyEmails.length ? job.applyEmails.join(', ') : job.applyEmailInSource ? '원문에서 확인하세요' : null],
+  ['문의 전화', job.phone],
+  ['비고', job.notes],
+];
+const shown = rows.filter(([, v]) => v);
+---
+<Base title={title} description={lead} path={`/jobs/${job.postingId}/`}>
+  <nav class="crumb" aria-label="현재 위치">
+    <ol>
+      <li><a href={`${base}/`}>처음</a></li>
+      <li><a href={`${base}/#${job.category === '사무직' ? 'office' : `sub-${job.subcategory}`}`}>{job.category === '사무직' ? '사무직' : `현장직 ${job.subcategory}`}</a></li>
+      <li aria-current="page">{displayName(job)}</li>
+    </ol>
+  </nav>
+
+  <h1>{title}</h1>
+  <p class="lead">{lead}</p>
+
+  <p class="notice">
+    이 페이지는 아래 출처를 옮겨 정리한 것입니다. 틀린 부분이 있을 수 있으니 지원 전에 원문에서 마감일과 조건을 확인하세요.
+  </p>
+
+  <h2>공고 내용</h2>
+  <dl class="rows">
+    {shown.map(([k, v]) => (
+      <div class="row"><dt>{k}</dt><dd>{v}</dd></div>
+    ))}
+    {job.applyUrl && (
+      <div class="row"><dt>접수 링크</dt><dd><a href={job.applyUrl} rel="noopener noreferrer">{job.applyUrl}</a></dd></div>
+    )}
+  </dl>
+
+  <h2>출처</h2>
+  <dl class="rows">
+    <div class="row"><dt>원문</dt><dd><a href={job.source.url} rel="noopener noreferrer">{job.source.name}</a></dd></div>
+    <div class="row"><dt>첨부파일</dt><dd>{job.source.document} ({job.source.originalNo}번 공고)</dd></div>
+    <div class="row"><dt>옮겨 적은 날</dt><dd>{job.collectedAt}</dd></div>
+    <div class="row"><dt>첨부파일과 대조한 날</dt><dd>{job.verifiedAt ?? '아직 안 함'}</dd></div>
+  </dl>
+
+  <p><a href={`${base}/`}>← 전체 공고 목록으로</a></p>
+</Base>
