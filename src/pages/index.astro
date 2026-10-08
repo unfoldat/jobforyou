@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import {
   allJobs, openJobs, closedJobs, SUB_ORDER, todayLabel, isToday,
-  displayName, deadlineLabel, place, type Job,
+  displayName, deadlineLabel, place, isThisWeek, isOpen, weekStart, weekEnd, dateLabel, today, type Job,
 } from '../lib/jobs';
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -13,6 +13,16 @@ const field = openJobs.filter((j) => j.category === '현장직');
 const fieldBySub = SUB_ORDER
   .map((s) => ({ name: s, items: field.filter((j) => j.subcategory === s) }))
   .filter((g) => g.items.length > 0);
+
+const week = openJobs.filter(isThisWeek);
+const weekPub = week.filter((j) => j.sector === '공공기관').length;
+const weekPri = week.filter((j) => j.sector === '민간기업').length;
+const checked = `${today.y}년 ${today.m}월 ${today.d}일 ${today.hhmm}`;
+
+const attrs = (j: Job) => ({
+  'data-sector': j.sector, 'data-cat': j.category, 'data-emp': j.employmentType,
+  'data-elig': j.eligibility, 'data-week': isThisWeek(j) ? '1' : '0', ...(isOpen(j) ? { 'data-open': '' } : {}),
+});
 
 const description = `${todayLabel} 기준 접수 중인 장애인 채용공고 ${openJobs.length}건. 사무직 ${office.length}건, 현장직 ${field.length}건을 마감 임박순으로 정리했습니다.`;
 ---
@@ -28,6 +38,49 @@ const description = `${todayLabel} 기준 접수 중인 장애인 채용공고 $
     옮기는 과정에서 틀린 부분이 있을 수 있으니, 지원 전에 각 공고의 원문에서 마감일과 조건을 꼭 확인하세요.
   </p>
 
+  <section aria-labelledby="week-h">
+    <h2 id="week-h">이번 주 마감 안내</h2>
+    <p>
+      현재 수집된 공고 중 이번 주({dateLabel(weekStart)}~{dateLabel(weekEnd)}, 한국시간)에 마감하는 접수 중 공고는{" "}
+      <strong>{week.length}건</strong>입니다. 공공기관 {weekPub}건, 민간기업 {weekPri}건입니다.
+      (최종 확인: {checked})
+    </p>
+    <ul id="quick">
+      <li><a href="#week-list" data-q="week=1">이번 주 마감 {week.length}건 전체 보기</a></li>
+      <li><a href="#week-list" data-q="week=1&sector=공공기관">이번 주 마감 공공기관 {weekPub}건 보기</a></li>
+      <li><a href="#week-list" data-q="week=1&sector=민간기업">이번 주 마감 민간기업 {weekPri}건 보기</a></li>
+      <li><a href="#filter-h">검색 조건 직접 정하기</a></li>
+    </ul>
+  </section>
+
+  <form id="filter" hidden aria-labelledby="filter-h">
+    <h2 id="filter-h">검색 조건 정하기</h2>
+    {[
+      ['sector', '기관 구분', ['공공기관', '민간기업']],
+      ['cat', '직무 구분', ['사무직', '현장직']],
+      ['emp', '고용형태', ['정규·무기', '계약직', '시간제']],
+      ['elig', '지원 구분', ['장애인 제한경쟁', '장애인만 채용', '장애인 병행채용']],
+      ['week', '마감 시기', [['1', '이번 주 마감만']]],
+    ].map(([name, legend, opts]: any) => (
+      <fieldset>
+        <legend>{legend}</legend>
+        <label><input type="radio" name={name} value="" checked /> 전체</label>
+        {opts.map((o: any) => {
+          const [v, t] = Array.isArray(o) ? o : [o, o];
+          return <label><input type="radio" name={name} value={v} /> {t}</label>;
+        })}
+      </fieldset>
+    ))}
+    <button type="submit">검색결과 보기</button>
+  </form>
+
+  <section id="results" hidden aria-labelledby="results-h">
+    <h2 id="results-h" tabindex="-1"></h2>
+    <p><a href="#filter-h" id="back">검색 조건으로 돌아가기</a> · <a href="#all">전체 목록 보기</a></p>
+    <ol class="jobs" id="week-list"></ol>
+  </section>
+
+  <h2 id="all">전체 목록</h2>
   <nav aria-label="이 페이지 바로가기">
     <ul class="jump">
       <li><a href="#office">사무직 {office.length}건</a></li>
@@ -39,7 +92,7 @@ const description = `${todayLabel} 기준 접수 중인 장애인 채용공고 $
   <h2 id="office">사무직 ({office.length}건)</h2>
   <ol class="jobs">
     {office.map((j) => (
-      <li>
+      <li {...attrs(j)}>
         <a class="t" href={link(j)}>{displayName(j)} · {j.jobTitle}</a>
         {' '}
         <span class="m">
@@ -60,7 +113,7 @@ const description = `${todayLabel} 기준 접수 중인 장애인 채용공고 $
       <h3 id={`sub-${g.name}`}>{g.name} ({g.items.length}건)</h3>
       <ol class="jobs">
         {g.items.map((j) => (
-          <li>
+          <li {...attrs(j)}>
             <a class="t" href={link(j)}>{displayName(j)} · {j.jobTitle}</a>
             {' '}
             <span class="m">
@@ -76,7 +129,7 @@ const description = `${todayLabel} 기준 접수 중인 장애인 채용공고 $
   <p>접수가 끝난 공고입니다. 재모집될 수 있어 지우지 않고 남겨 둡니다.</p>
   <ol class="jobs">
     {closedJobs.map((j) => (
-      <li>
+      <li {...attrs(j)}>
         <a class="t" href={link(j)}>{displayName(j)} · {j.jobTitle}</a>
         {' '}
         <span class="m"><span class="st">마감됨 {deadlineLabel(j)}</span> · {place(j)} · {j.category}</span>
@@ -89,4 +142,42 @@ const description = `${todayLabel} 기준 접수 중인 장애인 채용공고 $
     <li><a href={`${base}/jobs.md`}>마크다운 전체 목록 (jobs.md)</a></li>
     <li><a href={`${base}/jobs.json`}>데이터 전체 (jobs.json)</a></li>
   </ul>
+  <script is:inline>
+    (function () {
+      var form = document.getElementById('filter');
+      var box = document.getElementById('results');
+      var h = document.getElementById('results-h');
+      var list = document.getElementById('week-list');
+      if (!form || !box) return;
+      form.hidden = false;
+      var items = Array.prototype.slice.call(document.querySelectorAll('ol.jobs > li[data-sector]'))
+        .filter(function (li) { return !li.closest('#results') && li.closest('#closed-sec') === null; });
+      var open = items.filter(function (li) { return li.hasAttribute('data-open'); });
+      function run(q, move) {
+        var out = open.filter(function (li) {
+          if (q.week === '1' && li.dataset.week !== '1') return false;
+          return ['sector', 'cat', 'emp', 'elig'].every(function (k) { return !q[k] || li.dataset[k] === q[k]; });
+        });
+        list.innerHTML = '';
+        out.forEach(function (li) { list.appendChild(li.cloneNode(true)); });
+        var cond = [q.week === '1' ? '이번 주 마감' : '', q.sector, q.cat, q.emp, q.elig].filter(Boolean).join(', ') || '조건 없음';
+        h.textContent = out.length ? '검색결과 ' + out.length + '건 (' + cond + ')' : '검색결과 0건 (' + cond + '), 다른 조건을 선택해 주세요';
+        box.hidden = false;
+        if (move) { h.focus(); }
+      }
+      function fromForm() {
+        var q = {};
+        new FormData(form).forEach(function (v, k) { q[k] = v; });
+        return q;
+      }
+      form.addEventListener('submit', function (e) { e.preventDefault(); run(fromForm(), true); });
+      document.querySelectorAll('#quick a[data-q]').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+          e.preventDefault();
+          var q = {}; a.getAttribute('data-q').split('&').forEach(function (p) { var kv = p.split('='); q[kv[0]] = decodeURIComponent(kv[1]); });
+          run(q, true);
+        });
+      });
+    })();
+  </script>
 </Base>
