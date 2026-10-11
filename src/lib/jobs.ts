@@ -118,16 +118,15 @@ export function summary(j: Job) {
   return `${head} ${cond} ${elig} ${tail}`;
 }
 
-// '이번 주' = 월요일 00:00 ~ 일요일 23:59 (한국시간). 접수 중인 공고 중 이번 주 일요일까지 마감인 것.
-export const weekEnd = (() => {
+// '이번 주' = 일요일 00:00 ~ 토요일 23:59 (한국시간). 접수 중인 공고 중 이번 주 토요일까지 마감인 것.
+export const weekStart = (() => {
   const dt = new Date(Date.UTC(today.y, today.m - 1, today.d));
-  const dow = dt.getUTCDay(); // 0=일
-  dt.setUTCDate(dt.getUTCDate() + (dow === 0 ? 0 : 7 - dow));
+  dt.setUTCDate(dt.getUTCDate() - dt.getUTCDay()); // 0=일 → 이번 주 일요일로
   return dt.toISOString().slice(0, 10);
 })();
-export const weekStart = (() => {
-  const dt = new Date(`${weekEnd}T00:00:00Z`);
-  dt.setUTCDate(dt.getUTCDate() - 6);
+export const weekEnd = (() => {
+  const dt = new Date(`${weekStart}T00:00:00Z`);
+  dt.setUTCDate(dt.getUTCDate() + 6);
   return dt.toISOString().slice(0, 10);
 })();
 export const isThisWeek = (j: Job) => isOpen(j) && j.deadlineDate <= weekEnd;
